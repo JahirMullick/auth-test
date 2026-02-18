@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState, ReactNode, useMemo } from 'react';
 import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
+import { isTokenValid } from '../services/authHelper';
 
 const TOKEN_KEY = 'auth_token';
 
@@ -48,16 +49,35 @@ const storage = {
     },
 };
 
-// Decode JWT payload to extract user info
+// Base64 decode that works on web, iOS, and Android (no atob/Buffer dependency)
+function base64Decode(input: string): string {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=';
+    // Convert base64url to standard base64
+    let str = input.replace(/-/g, '+').replace(/_/g, '/');
+    // Add padding
+    while (str.length % 4 !== 0) {
+        str += '=';
+    }
+    let output = '';
+    for (let i = 0; i < str.length; i += 4) {
+        const a = chars.indexOf(str[i]);
+        const b = chars.indexOf(str[i + 1]);
+        const c = chars.indexOf(str[i + 2]);
+        const d = chars.indexOf(str[i + 3]);
+        output += String.fromCharCode((a << 2) | (b >> 4));
+        if (c !== 64) output += String.fromCharCode(((b & 15) << 4) | (c >> 2));
+        if (d !== 64) output += String.fromCharCode(((c & 3) << 6) | d);
+    }
+    return output;
+}
+
+// Decode JWT payload to extract user info (cross-platform)
 function decodeToken(token: string): User | null {
     try {
         const parts = token.split('.');
         if (parts.length !== 3) return null;
-        
-        const payload = parts[1];
-        const decoded = atob(payload.replace(/-/g, '+').replace(/_/g, '/'));
+        const decoded = base64Decode(parts[1]);
         const data = JSON.parse(decoded);
-        
         return {
             sub: data.sub,
             name: data.name,
@@ -67,23 +87,6 @@ function decodeToken(token: string): User | null {
         };
     } catch {
         return null;
-    }
-}
-
-// Validate JWT - check if token exists and hasn't expired
-function validateToken(token: string): boolean {
-    try {
-        const user = decodeToken(token);
-        if (!user) return false;
-        
-        // Check expiration
-        if (user.exp && user.exp * 1000 < Date.now()) {
-            return false;
-        }
-        
-        return true;
-    } catch {
-        return false;
     }
 }
 
@@ -107,15 +110,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
             try {
                 // Minimum 2 second splash screen delay
                 const minDelay = new Promise(resolve => setTimeout(resolve, 2000));
-                
+
                 const [storedToken] = await Promise.all([
                     storage.getItem(TOKEN_KEY),
                     minDelay,
                 ]);
-                
+
                 if (storedToken) {
-                    const isValid = validateToken(storedToken);
-                    if (isValid) {
+                    if (isTokenValid(storedToken)) {
                         setToken(storedToken);
                     } else {
                         // Token expired, remove it

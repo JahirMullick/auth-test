@@ -6,6 +6,10 @@
     "orientation": "portrait",
     "icon": "./src/assets/icon.png",
     "userInterfaceStyle": "light",
+    "splash": {
+      "backgroundColor": "#ffffff",
+      "resizeMode": "contain"
+    },
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true
@@ -20,7 +24,7 @@
     "web": {
       "favicon": "./src/assets/favicon.png"
     },
-     "plugins": [
+    "plugins": [
       [
         "expo-secure-store",
         {

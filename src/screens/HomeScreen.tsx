@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import * as Clipboard from 'expo-clipboard';
 import Button from '../components/Button';
 import ConfirmationModal from '../components/ConfirmationModal';
 import { useAuth } from '../context/AuthContext';
@@ -7,9 +8,10 @@ import { useAuth } from '../context/AuthContext';
 export default function HomeScreen() {
     const { user, token, signOut } = useAuth();
     const [showLogoutModal, setShowLogoutModal] = useState(false);
+    const [copied, setCopied] = useState(false);
 
     // Truncate token for display (show first 20 and last 10 chars)
-    const truncatedToken = token 
+    const truncatedToken = token
         ? `${token.substring(0, 20)}...${token.substring(token.length - 10)}`
         : 'No token';
 
@@ -24,6 +26,13 @@ export default function HomeScreen() {
 
     const handleLogoutCancel = () => {
         setShowLogoutModal(false);
+    };
+
+    const handleCopyToken = async () => {
+        if (!token) return;
+        await Clipboard.setStringAsync(token);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
     };
 
     return (
@@ -60,6 +69,9 @@ export default function HomeScreen() {
                 <Text style={styles.sectionTitle}>JWT Token</Text>
                 <View style={styles.tokenCard}>
                     <Text style={styles.tokenText} selectable>{truncatedToken}</Text>
+                    <Pressable style={styles.copyButton} onPress={handleCopyToken}>
+                        <Text style={styles.copyButtonText}>{copied ? '✓ Copied!' : 'Copy'}</Text>
+                    </Pressable>
                 </View>
             </View>
 
@@ -161,6 +173,19 @@ const styles = StyleSheet.create({
         fontFamily: 'monospace',
         fontSize: 12,
         color: '#00ff88',
+    },
+    copyButton: {
+        alignSelf: 'flex-end',
+        marginTop: 10,
+        backgroundColor: 'rgba(255,255,255,0.15)',
+        paddingHorizontal: 14,
+        paddingVertical: 6,
+        borderRadius: 6,
+    },
+    copyButtonText: {
+        color: '#fff',
+        fontSize: 13,
+        fontWeight: '600',
     },
     logoutSection: {
         alignItems: 'center',

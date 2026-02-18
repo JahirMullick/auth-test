@@ -1,25 +1,32 @@
+import { useEffect } from "react";
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
+import * as SplashScreen from "expo-splash-screen";
 import AuthNavigator from "./AuthNavigator";
-import HomeScreen from "../screens/HomeScreen";
+import MainNavigator from "./MainNavigator";
 import { useAuth } from "../context/AuthContext";
-import SplashScreen from "../screens/SplashScreen";
+import SplashScreenView from "../screens/SplashScreen";
 
 const Stack = createNativeStackNavigator();
 
 export default function AppNavigator() {
     const { isAuthenticated, isLoading } = useAuth();
 
-    // Show splash screen while checking for existing token
+    // Hide the native Expo splash immediately so our custom one takes over
+    useEffect(() => {
+        SplashScreen.hideAsync();
+    }, []);
+
+    // Show custom splash screen while checking for existing token
     if (isLoading) {
-        return <SplashScreen />;
+        return <SplashScreenView />;
     }
 
     return (
         <NavigationContainer>
             <Stack.Navigator id="RootStack" screenOptions={{ headerShown: false }}>
                 {isAuthenticated ? (
-                    <Stack.Screen name="Home" component={HomeScreen} />
+                    <Stack.Screen name="Main" component={MainNavigator} />
                 ) : (
                     <Stack.Screen name="Auth" component={AuthNavigator} />
                 )}
